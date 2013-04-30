@@ -398,55 +398,117 @@ pdal::Metadata Reader::LoadMetadata(xmlNode* startNode)
     pdal::Metadata output;
     
     xmlNode* node = startNode;
+    xmlNode* last = startNode;
     
-    
-//     xmlChar* name = xmlGetProp(node, (const xmlChar*) "name");
-//     xmlChar* etype = xmlGetProp(node, (const xmlChar*) "type");
-// print_element_names(node);
-        // std::cout << "node name: " << (const char*)node->name << std::endl;   
-//         std::cout << "prop type: " << (const char*) etype << std::endl;   
-    
-    // pdal::Metadata m((const char*) node->name);
-    // if (boost::iequals((const char*)etype, "blank"))
-    // {
-    //     // blank denotes a new Metadata instance.
-    //     if (node->children)
-    //         output.addMetadata(LoadMetadata(node->children));
-    // }
-    
-        // 
-
     while (node != NULL)
     {
-
-        std::cout << "node name: " << (const char*)node->name << std::endl;   
         
-        if (node->properties)
+        std::string node_name((const char*) node->name, xmlStrlen(node->name));
+        
+
+        if (node->type == XML_ELEMENT_NODE && 
+            boost::equals(node_name, "Metadata"))
         {
+
             xmlChar* name = xmlGetProp(node, (const xmlChar *)"name");
             xmlChar* etype = xmlGetProp(node, (const xmlChar *)"type");
-            std::cout << "property name: " << (const char*)name << std::endl;   
-            // std::cout << "proper type: " << (const char*)etype << std::endl;   
-
+            xmlChar* description = xmlGetProp(node, (const xmlChar *)"description");
+                    
+            std::string property_name(  (const char *)name, 
+                                        xmlStrlen(name));
+            std::string property_type((const char *)etype, xmlStrlen(etype));
+            std::string property_description((const char *)description, xmlStrlen(description));
+            
+            pdal::Metadata m(property_name, property_type);
+            m.setDescription(property_description);
+            
+            
+            std::string value("");
+            if (node->last)
+                value = std::string((const char*) node->last->content, 
+                                    xmlStrlen(node->last->content));
+            
+            if (boost::equals(property_type, "boolean"))
+            {
+                value=boost::trim_left_copy(value);
+                value=boost::trim_right_copy(value);
+                if (boost::iequals(value, "TRUE"))
+                    m.setValue<bool>(true);
+                else
+                    m.setValue<bool>(false);
+            } else if (boost::equals(property_type, "string"))
+            {
+                m.setValue<std::string>(value);                
+            } else if (boost::equals(property_type, "base64Binary"))
+            {
+                std::vector<boost::uint8_t> bytes = Utils::base64_decode(value);
+                m.setValue<pdal::ByteArray>(bytes);
+            } else if (boost::equals(property_type, "float"))
+            {
+                m.setValue<float>(atof(value.c_str()));                
+            } else if (boost::equals(property_type, "double"))
+            {
+                m.setValue<double>(atof(value.c_str()));
+            } else if (boost::equals(property_type, "spatialreference"))
+            {
+                m.setValue<pdal::SpatialReference>(value);                
+            } else if (boost::equals(property_type, "bounds"))
+            {
+                Bounds<double> b;
+                std::stringstream ss;
+                ss << value;
+                ss >> b;                
+                m.setValue<pdal::Bounds<double> >(b);                
+            } else if (boost::equals(property_type, "nonNegativeInteger"))
+            {
+                m.setValue<boost::uint64_t>(atoi(value.c_str()));                
+            } else if (boost::equals(property_type, "integer"))
+            {
+                m.setValue<boost::int64_t>(atoi(value.c_str()));
+            } else if (boost::equals(property_type, "blank"))
+            {
+                if (node->children)
+                {
+                    pdal::Metadata m2 = LoadMetadata(node->children);
+                    // m2.setType(property_type);
+                    // m2.setName(property_name);
+                    m.addMetadata(m2.getName(), m2);
+                    m.setValue<std::string>("");
+                    m.setType("blank");
+                    node = node->next;
+                    last = 0;
+                }
+            }
+            
+            output.setMetadata(m);
         }
         
-        // pdal::Metadata m((const char*) node->name);
-        // if (boost::iequals((const char*)etype.get(), "blank"))
-        // {
-        //     // blank denotes a new Metadata instance.
-        //     m.addMetadata(LoadMetadata(node));
-        // }
-            
-        
-        // output.addMetadata(m);
-
-        if (node->type == XML_ELEMENT_NODE)
+        if (node)
         {
-            node = node->children;
-        } else
-            node = node->next;
+            if (node->children)
+            {
+                // Keep track of our last node above us if 
+                // we're going down a level
+                last = node;
+                node = node->children;
+            }
+            else
+            {
+                if (!node->next)
+                {
+                    if (last)
+                        node = last->next;
+                    else
+                        break;
+                    last = node;
+                } else
+                    node = node->next;
+            }
+
+        }
     }
     
+    std::cout << "output : " << output << std::endl;
     return output;
 }
 
@@ -469,25 +531,23 @@ void Reader::Load()
     while (dimension != NULL)
     {
         // printf("node name: %s\n", (const char*)dimension->name);
-        // if (boost::equals((const char*)dimension->name, "metadata"))
-        // {
-        //     printf("metadata node name: %s\n", (const char*)dimension->name);
-        //     
-        //              
-        //     metadata.addMetadata(LoadMetadata(dimension));
-        //     dimension = dimension->next;
-        //     continue;
-        // }
-
-        if (dimension->type != XML_ELEMENT_NODE || !boost::iequals((const char*)dimension->name, "dimension"))
+        if (dimension->type == XML_ELEMENT_NODE 
+            && boost::equals((const char*)dimension->name, "metadata"))
         {
+            // printf("metadata node name: %s\n", (const char*)dimension->name);
+            
+                     
+            metadata.setMetadata(LoadMetadata(dimension));
             dimension = dimension->next;
             continue;
         }
 
-
-
-
+        if (dimension->type != XML_ELEMENT_NODE || 
+            !boost::iequals((const char*)dimension->name, "dimension"))
+        {
+            dimension = dimension->next;
+            continue;
+        }
 
         xmlNode* properties = dimension->children;
 
@@ -688,6 +748,8 @@ void Reader::Load()
         const Dimension& dim = *i;
         m_schema.appendDimension(dim);
     }
+    
+    m_metadata = metadata;
 
 }
 

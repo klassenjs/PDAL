@@ -134,10 +134,16 @@ public:
     Reader(std::istream* xml, std::istream* schema);
     ~Reader();
 
-    inline pdal::Schema getSchema()
+    inline pdal::Schema  const& getSchema() const
     {
         return m_schema;
     }
+    
+    inline pdal::Metadata const& getMetadata() const 
+    { 
+        return m_metadata; 
+    }
+        
 
 
 protected:
@@ -171,6 +177,7 @@ private:
     std::string m_xsd;
 
     boost::uint32_t m_field_position;
+    pdal::Metadata m_metadata;
 
 
 

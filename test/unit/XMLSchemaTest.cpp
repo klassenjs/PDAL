@@ -103,31 +103,28 @@ BOOST_AUTO_TEST_CASE(test_schema_read)
     std::string xml = ReadXML(TestConfig::g_data_path+"../../schemas/8-dimension-schema.xml");
     std::string xsd = ReadXML(TestConfig::g_data_path+"../../schemas/LAS.xsd");
     pdal::schema::Reader reader(xml, xsd);
+    
+    pdal::Metadata m = reader.getMetadata();
 
+    
+    // std::string a_horrible_path("metadata.root.metadata.filters_inplacereprojection.metadata.root.metadata.a_number");
+    // 
+    // BOOST_CHECK_EQUAL(m.getMetadata(a_horrible_path).getValue<boost::uint32_t>(), 32);
     pdal::Schema schema = reader.getSchema();
 
 
     pdal::Metadata m1("m1");
-    pdal::Metadata m2("m2");
-    pdal::Metadata m1prime("m1");
 
     m1.setValue<boost::uint32_t>(1u);
-    m2.setValue<boost::int32_t>(1);
-    m1prime.setValue<std::string>("Some other metadata");
 
     pdal::Metadata b;
 
     b.addMetadata(m1.getName(), m1);
 
-    pdal::Metadata m3(m1);
-    BOOST_CHECK_EQUAL(m3.getValue<boost::uint32_t>(), 1u);
-    m3.setValue<boost::int64_t>(64);
-    BOOST_CHECK_EQUAL(m3.getValue<boost::int64_t>(), 64);
-
-    
     b.addMetadata("uuid", boost::uuids::nil_uuid());
 
     
+    std::cout << "outbound: " << b << std::endl;
     pdal::schema::Writer writer(schema);
     writer.setMetadata(b.toPTree());
 
@@ -138,6 +135,11 @@ BOOST_AUTO_TEST_CASE(test_schema_read)
     delete output;
     pdal::schema::Reader reader2(xml_output, xsd);
     pdal::Schema schema2 = reader2.getSchema();
+    
+    pdal::Metadata cycled = reader2.getMetadata();
+    
+    std::cout << cycled << std::endl;
+    BOOST_CHECK_EQUAL(cycled.getMetadata("m2").getValue<boost::int32_t>(), 1);
 
     schema::index_by_index const& dims1 = schema.getDimensions().get<schema::index>();
     schema::index_by_index const& dims2 = schema2.getDimensions().get<schema::index>();
