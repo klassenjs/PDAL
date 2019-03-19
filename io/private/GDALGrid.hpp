@@ -126,12 +126,12 @@ private:
     // Return the absolute horizontal position of the center of a cell given
     // the cell i index.
     double horizontalPos(size_t i) const
-        { return (i + .5) * m_edgeLength; }
+        { return (i) * m_edgeLength; }
 
     // Return the absolute vertical position of the center of a cell given
     // the cell j index.
     double verticalPos(size_t j) const
-        { return (m_height - (j + .5)) * m_edgeLength; }
+        { return (m_height - (j + 1)) * m_edgeLength; }
 
     // Determine the distance from the center of cell at coordinate i, j to
     // a point at absolute coordinate x, y.

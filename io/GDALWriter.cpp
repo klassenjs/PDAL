@@ -267,10 +267,10 @@ void GDALWriter::doneFile()
 
     std::array<double, 6> pixelToPos;
 
-    pixelToPos[0] = m_origin.x;
+    pixelToPos[0] = m_origin.x - (m_edgeLength * 0.5);
     pixelToPos[1] = m_edgeLength;
     pixelToPos[2] = 0;
-    pixelToPos[3] = m_origin.y + (m_edgeLength * m_grid->height());
+    pixelToPos[3] = m_origin.y + (m_edgeLength * m_grid->height()) - (m_edgeLength * 0.5);
     pixelToPos[4] = 0;
     pixelToPos[5] = -m_edgeLength;
     gdal::Raster raster(m_outputFilename, m_drivername, m_srs, pixelToPos);
