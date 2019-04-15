@@ -170,12 +170,14 @@ TEST(PlyWriter, issue_2421)
     t.layout()->registerDim(Dimension::Id::Y);
     t.layout()->registerDim(Dimension::Id::Z);
     Dimension::Id iid = t.layout()->assignDim("I", Dimension::Type::Signed32);
+    Dimension::Id jid = t.layout()->assignDim("J", Dimension::Type::Unsigned32);
 
     PointViewPtr v(new PointView(t));
     v->setField(Dimension::Id::X, 0, 1.23456789012345);
     v->setField(Dimension::Id::Y, 0, 12345.6789012345);
     v->setField(Dimension::Id::Z, 0, 1234567890.12345);
     v->setField(iid, 0, 12345);
+    v->setField(jid, 0, 1234567890);
 
     BufferReader r;
     r.addView(v);

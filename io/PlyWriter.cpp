@@ -168,16 +168,28 @@ void PlyWriter::writeValue(PointRef& point, Dimension::Id dim,
 {
     if (m_format == Format::Ascii)
     {
-        double d = point.getFieldAs<double>(dim);
-        if (m_precisionArg->set() &&
-            Dimension::base(type) == Dimension::BaseType::Floating)
+        if (Dimension::base(type) == Dimension::BaseType::Floating)
         {
-            *m_stream << std::fixed;
-            m_stream->precision(m_precision);
+            double d = point.getFieldAs<double>(dim);
+            if (m_precisionArg->set())
+            {
+                *m_stream << std::fixed;
+                m_stream->precision(m_precision);
+            }
+            *m_stream << d;
         }
-        else
+        else if (Dimension::base(type) == Dimension::BaseType::Signed)
+        {
+            int64_t i = point.getFieldAs<int64_t>(dim);
             m_stream->unsetf(std::ios_base::fixed);
-        *m_stream << d;
+            *m_stream << i;
+        }
+        else // Unsigned
+        {
+            uint64_t u = point.getFieldAs<uint64_t>(dim);
+            m_stream->unsetf(std::ios_base::fixed);
+            *m_stream << u;
+        }
     }
     else if (m_format == Format::BinaryLe)
     {
